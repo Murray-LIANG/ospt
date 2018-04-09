@@ -1,4 +1,6 @@
+import functools
 import logging
+from logging import handlers
 import time
 from contextlib import contextmanager
 
@@ -9,8 +11,8 @@ LOG = logging.getLogger()
 
 def setup_log(file_path=None, level=logging.INFO, to_stdout=True,
               max_bytes=104857600, max_file_count=5):
-    fmt_str = ('%(asctime)-15s %(name)-12s %(threadName)s '
-               '%(levelname)-8s %(message)s')
+    fmt_str = ('%(asctime)-15s %(name)-8s %(threadName)s '
+               '%(levelname)-4s %(message)s')
     fmt = logging.Formatter(fmt_str)
     # Set root logger to `level` or it would be warning which will
     # suppress logs lower than warning.
@@ -22,7 +24,7 @@ def setup_log(file_path=None, level=logging.INFO, to_stdout=True,
         console.setFormatter(fmt)
         root.addHandler(console)
     if file_path:
-        file_handler = logging.handlers.RotatingFileHandler(
+        file_handler = handlers.RotatingFileHandler(
             filename=file_path, maxBytes=max_bytes, backupCount=max_file_count)
         file_handler.setLevel(level)
         file_handler.setFormatter(fmt)
@@ -47,13 +49,28 @@ def timer():
         _timer.end = time.time()
 
 
+def to_str(resource):
+    if isinstance(resource, list) or isinstance(resource, tuple):
+        return ':'.join(to_str(each) for each in resource)
+
+    from ospt.control import Resource as OsptRes
+    if isinstance(resource, OsptRes):
+        return str(resource)
+
+    from storops.lib.resource import Resource as StoropsRes
+    if isinstance(resource, StoropsRes):
+        return 'id={},name={}'.format(resource.get_id(), resource.name)
+
+    return str(resource)
+
+
 def timeit(func):
+    @functools.wraps(func)
     def _wrapper(*args, **kwargs):
-        LOG.info('%s: %s.', func.__name__, args)
+        LOG.info('%s: %s.', func.__name__, to_str(args))
         with timer() as t:
             result = func(*args, **kwargs)
-        LOG.info('TIME: %s: %s, %s.',
-                 func.__name__, args, t.interval)
+        LOG.info('TIME: %s, %s: %s.', t.interval, func.__name__, to_str(args))
         return result
 
     return _wrapper

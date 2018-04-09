@@ -1,26 +1,31 @@
-class ConnectionError(Exception):
+class OsptException(Exception):
+    msg = ''
+
+    def __init__(self, message, **kwargs):
+        _msg = message if message else self.msg
+        super(Exception, self).__init__(_msg.format(**kwargs))
+
+
+class ConnectionError(OsptException):
     pass
 
 
-class TimeoutError(Exception):
+class TimeoutError(OsptException):
     pass
 
 
-class NotEnoughResourcesToDeleteError(Exception):
+class NotEnoughResourcesToDeleteError(OsptException):
     pass
 
 
-class CountOfServersVolumesNotMatchError(Exception):
+class CountOfServersVolumesNotMatchError(OsptException):
     pass
 
 
-class MappingNotSupportedError(Exception):
-    def __init__(self, mapping):
-        self.message = ('Mapping {} is not supported. Only <N>:1 or 1:<N> are '
-                        'supported.'.format(mapping))
+class MappingNotSupportedError(OsptException):
+    msg = ('Mapping {mapping} is not supported. Only <N>:1 or 1:<N> are '
+           'supported.')
 
 
-class NotEnoughResourcesForMappingError(Exception):
-    def __init__(self, existing, required):
-        self.message = '{} of resources are not enough, {} are needed.'.format(
-            existing, required)
+class NotEnoughResourcesForMappingError(OsptException):
+    msg = '{existing} of resources are not enough, {required} are needed.'

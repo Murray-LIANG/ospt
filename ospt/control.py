@@ -15,13 +15,14 @@ LOG = logging.getLogger()
 
 def create_control(args):
     nova = cinder = glance = storops_array = None
-    auth_url = args.get('--os_auth_url', None)
-    username = args.get('--os_username', None)
-    password = args.get('--os_password', None)
+    username = args.get('--username', None)
+    password = args.get('--password', None)
+
+    auth_ip = args.get('--os_auth_ip', None)
     project = args.get('--os_project', None)
 
-    if all((auth_url, username, password, project)):
-        credentials = {'auth_url': 'http://{}:5000/v2.0'.format(auth_url),
+    if all((auth_ip, username, password, project)):
+        credentials = {'auth_url': 'http://{}:5000/v2.0'.format(auth_ip),
                        'username': username,
                        'api_key': password,
                        'project_id': project}
@@ -31,11 +32,8 @@ def create_control(args):
 
     unity = args.get('--storops_unity', None)
     vnx = args.get('--storops_vnx', None)
-    username = args.get('--storops_username', None)
-    password = args.get('--storops_password', None)
     if all((unity, vnx)):
-        raise ospt_ex.ConnectionError('Cannot specify Unity and VNX '
-                                      'together.')
+        raise ospt_ex.ConnectionError('Cannot specify both Unity and VNX.')
     if all((unity, username, password)):
         storops_array = storops.UnitySystem(unity, username, password)
 
@@ -58,7 +56,7 @@ class Resource(object):
         self._name = name
 
     def __repr__(self):
-        return '{}:{}'.format(self._id, self._name)
+        return 'id={},name={}'.format(self._id, self._name)
 
     @property
     def id(self):
@@ -126,7 +124,7 @@ class BaseControl(object):
                 is_more_servers = True
             if len(more) < count:
                 raise ospt_ex.NotEnoughResourcesForMappingError(
-                    len(more), count)
+                    existing=len(more), required=count)
 
             n = int(math.ceil(count / len(less)))
             less_repeat = itertools.chain.from_iterable([less] * n)[:count]
@@ -179,12 +177,12 @@ class OpenstackControl(BaseControl):
         server.delete()
 
     @utils.timeit
-    def attach_volume(self, server, volume):
+    def attach(self, server, volume):
         self.nova.volumes.create_server_volume(server.id, volume.id)
         utils.wait_until(self.cinder, volume.id, 'in-use')
 
     @utils.timeit
-    def detach_volume(self, server, volume):
+    def detach(self, server, volume):
         self.nova.volumes.delete_server_volume(server.id, volume.id)
         utils.wait_until(self.cinder, volume.id, 'available')
 
@@ -192,8 +190,8 @@ class OpenstackControl(BaseControl):
 class StoropsControl(BaseControl):
     def __init__(self, array):
         self.array = array
-        self._pool = None
-        self._is_unity = None
+        self.pool = self.array.get_pool()[0]
+        self.is_unity = isinstance(self.array, storops.UnitySystem)
 
     def get_volumes(self, tag):
         return [each for each in self.array.get_lun()
@@ -202,18 +200,6 @@ class StoropsControl(BaseControl):
     def get_servers(self, tag):
         return [each for each in self.array.get_host()
                 if each.name.startswith(self.tag_server_name(tag))]
-
-    @property
-    def pool(self):
-        if not self._pool:
-            self._pool = self.array.get_pool()[0]
-        return self._pool
-
-    @property
-    def is_unity(self):
-        if self._is_unity is None:
-            self._is_unity = isinstance(self.array, storops.UnitySystem)
-        return self._is_unity
 
     @utils.timeit
     def create_volume(self, volume):
@@ -236,3 +222,15 @@ class StoropsControl(BaseControl):
             server.detach(volume)
         else:
             server.detach_alu(volume)
+
+    @utils.timeit
+    def create_server(self, server):
+        if self.is_unity:
+            self.array.create_host(name=server.name)
+        else:
+            self.array.create_sg(name=server.name)
+
+    @staticmethod
+    @utils.timeit
+    def delete_server(server):
+        server.delete()

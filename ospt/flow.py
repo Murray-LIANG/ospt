@@ -13,10 +13,13 @@ class Flow(object):
         self.pattern = pattern
 
     def map(self, data, threads_num=None):
-        def _wrapper(index, tup):
-            if not self.pattern:
-                time.sleep(index * self.pattern)
-            return self.func(*tup)
+        def _wrapper(tup):
+            if self.pattern:
+                time.sleep(tup[0] * self.pattern)
+            if isinstance(tup[1], tuple):
+                return self.func(*tup[1])
+            else:
+                return self.func(tup[1])
 
         number = len(data) if threads_num is None else threads_num
         threads = multithread.Pool(number)

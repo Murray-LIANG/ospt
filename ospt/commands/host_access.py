@@ -7,42 +7,44 @@ from ospt.commands import base
 LOG = logging.getLogger()
 
 
-class AttachVolume(base.BaseCommand):
+class Attach(base.BaseCommand):
     """
 Dell-EMC OpenStack Performance Test: Attach volumes.
 
 usage:
-    ospt attach-volumes --tag <tag> --count <count> [--mapping <mapping>]
+    ospt attach --tag <tag> --count <count> [--mapping <mapping>]
 
 options:
     --tag <tag>             A tag string contained in the volume name
     --count <count>         The number of server-volume pairs to attach
-    --mapping <mapping>     The mapping of server and volume. If omitted, 1:1 will be used
+    --mapping <mapping>     The mapping of server and volume.
+                            If omitted, 1:1 will be used
 
 examples:
     # To attach volumes:
-    # vol-ml-test-00 to server-ml-test-00 and vol-ml-test-01 to server-ml-test-01
-    ospt attach-volumes --tag ml-test --count 2
+    #   vol-ml-test-00 to server-ml-test-00
+    #   and vol-ml-test-01 to server-ml-test-01
+    ospt attach --tag ml-test --count 2
     """
-    name = 'attach-volumes'
+    name = 'attach'
 
     def do(self):
         mapping_str = self.args.get('--mapping', '1:1')
         mapping = mapping_str.split(':')
-        if len(mapping) != 2 or all((mapping[0] != 1, mapping[1] != 1)):
-            raise ospt_ex.MappingNotSupportedError(mapping_str)
+        if len(mapping) != 2 or all((mapping[0] != '1', mapping[1] != '1')):
+            raise ospt_ex.MappingNotSupportedError(mapping=mapping_str)
         pairs_server_vol = self.controller.pair_servers_volumes(
-            self.args['--tag'], self.args['--count'], mapping)
-        f = flow.Flow(self.controller.attach_volume)
+            self.args['--tag'], int(self.args['--count']), mapping)
+        f = flow.Flow(self.controller.attach)
         f.map(pairs_server_vol)
 
 
-class DetachVolume(base.BaseCommand):
+class Detach(base.BaseCommand):
     """
 Dell-EMC OpenStack Performance Test: Detach volumes.
 
 usage:
-    ospt detach-volumes --tag <tag> --count <count> [--mapping <mapping>]
+    ospt detach --tag <tag> --count <count> [--mapping <mapping>]
 
 options:
     --tag <tag>             A tag string contained in the volume name
@@ -51,16 +53,16 @@ options:
 
 examples:
     # To detach the first two volumes from hosts:
-    ospt detach-volumes --tag ml-test --count 2
+    ospt detach --tag ml-test --count 2
     """
-    name = 'detach-volumes'
+    name = 'detach'
 
     def do(self):
         mapping_str = self.args.get('--mapping', '1:1')
         mapping = mapping_str.split(':')
-        if len(mapping) != 2 or all((mapping[0] != 1, mapping[1] != 1)):
-            raise ospt_ex.MappingNotSupportedError(mapping_str)
+        if len(mapping) != 2 or all((mapping[0] != '1', mapping[1] != '1')):
+            raise ospt_ex.MappingNotSupportedError(mapping=mapping_str)
         pairs_server_vol = self.controller.pair_servers_volumes(
-            self.args['--tag'], self.args['--count'], mapping)
-        f = flow.Flow(self.controller.detach_volume)
+            self.args['--tag'], int(self.args['--count']), mapping)
+        f = flow.Flow(self.controller.detach)
         f.map(pairs_server_vol)

@@ -1,28 +1,33 @@
 """
-Dell EMC Openstack Performance Test.
+Dell EMC OpenStack Performance Test.
 
 usage:
-    ospt [-hV --os_auth_url <auth_url> --os_username <username>
-          --os_password <password> --os_project <project> --storops_vnx <vnx>
-          --storops_unity <unity> --storops_username <username>
-          --storops_password <password> --pattern <pattern>]
-        <command> [<args>...]
+    ospt [-hV] [--os_auth_ip <auth_ip>] [--os_project <project>]
+         [--storops_vnx <vnx>] [--storops_unity <unity>]
+         [--username <username>] [--password <password>]
+         [--pattern <pattern>] [--log <log_file>]
+      <command> [<args>...]
 
 options:
     -h --help                       Show the help, could be used for commands
     -V --version                    Show the version
-    --os_auth_url <auth_url>        OpenStack auth URL
-    --os_username <username>        OpenStack user name
-    --os_password <password>        OpenStack api password
+    --os_auth_ip <auth_ip>          OpenStack auth (Keystone) IP address
     --os_project <project>          OpenStack project name
-    --storops_vnx <vnx>             The VNX IP to which storops connects
-    --storops_unity <unity>         The Unity IP to which storops connects
-    --storops_username <username>   Storops user name
-    --storops_password <password>   Storops password
-    --pattern <number>              The concurrence pattern, i.e. 2 means to sleep 2 sec before starting next thread.
+    --storops_vnx <vnx>             VNX IP to which storops connects
+    --storops_unity <unity>         Unity IP to which storops connects
+    --username <username>           User name to login OpenStack or Array
+    --password <password>           Password to login OpenStack or Array
+    --pattern <number>              Concurrence pattern, i.e. 2 means to
+                                    sleep 2 sec before starting next thread
+    --log <log_file>                Log file path
 
 supported commands:
     create-volumes          Collect the time of creating volumes
+    delete-volumes          Collect the time of deleting volumes
+    create-servers          Collect the time of creating servers
+    delete-servers          Collect the time of deleting servers
+    attach                  Collect the time of attaching volumes
+    detach                  Collect the time of detaching volumes
 
 examples:
     ospt --help
@@ -30,15 +35,15 @@ examples:
 """
 
 import docopt
+from pbr import version
 
-import ospt
 from ospt import commands
 
 
 def main():
     """Main cli entry point for distributing cli commands."""
-    args = docopt.docopt(__doc__, version=ospt.__version__, options_first=True,
-                         help=True)
+    args = docopt.docopt(__doc__, options_first=True,
+                         version=version.VersionInfo('ospt').release_string())
     cmd_name = args.pop('<command>')
     cmd_args = args.pop('<args>')
 

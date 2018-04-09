@@ -18,9 +18,11 @@ class BaseCommand(object):
         :param global_args: arguments of the program
         """
         self.cmd_args = docopt.docopt(self.__doc__, argv=cmd_args)
-        self.global_args = global_args
-        self.args = self.global_args.update(self.cmd_args)
-        utils.setup_log(to_stdout=self.log_to_stdout)
+        self.args = global_args
+        self.args.update(self.cmd_args)
+        self.args = {k: v for k, v in self.args.items() if v is not None}
+        utils.setup_log(file_path=self.args.get('--log', None),
+                        to_stdout=self.log_to_stdout)
 
         self.controller = control.create_control(self.args)
 

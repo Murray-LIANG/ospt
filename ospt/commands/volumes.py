@@ -26,6 +26,7 @@ examples:
     def do(self):
         vols_to_create = self.controller.prepare_volumes_to_create(
             self.args['--tag'], int(self.args['--count']))
+        LOG.info('volumes to create: %s', vols_to_create)
         f = flow.Flow(self.controller.create_volume)
         f.map(vols_to_create)
 
