@@ -1,0 +1,4 @@
+pbr
+python-glanceclient
+storops
+docopt
