@@ -4,8 +4,12 @@ import math
 
 import storops
 from cinderclient import client as c_client
+from cinderclient import exceptions as cinder_ex
 from glanceclient import client as g_client
+from keystoneauth1 import loading
+from keystoneauth1 import session
 from novaclient import client as n_client
+from novaclient import exceptions as nova_ex
 
 from ospt import exceptions as ospt_ex
 from ospt import utils
@@ -22,13 +26,16 @@ def create_control(args):
     project = args.get('--os_project', None)
 
     if all((auth_ip, username, password, project)):
-        credentials = {'auth_url': 'http://{}:5000/v2.0'.format(auth_ip),
-                       'username': username,
-                       'api_key': password,
-                       'project_id': project}
-        nova = n_client.Client(1.1, **credentials)
-        cinder = c_client.Client(2, **credentials)
-        glance = g_client.Client(**credentials)
+        loader = loading.get_plugin_loader('password')
+        auth = loader.load_from_options(
+            auth_url='http://{}:5000/v2.0'.format(auth_ip),
+            username=username,
+            password=password,
+            project_name=project)
+        sess = session.Session(auth=auth)
+        nova = n_client.Client(2, session=sess)
+        cinder = c_client.Client(2, session=sess)
+        glance = g_client.Client('2', session=sess)
 
     unity = args.get('--storops_unity', None)
     vnx = args.get('--storops_vnx', None)
@@ -158,33 +165,33 @@ class OpenstackControl(BaseControl):
     @utils.timeit
     def create_volume(self, volume):
         vol = self.cinder.volumes.create(name=volume.name, size=3)
-        utils.wait_until(self.cinder, vol.id, 'available')
+        utils.wait_until(self.cinder.volumes, vol.id, 'available')
 
-    @staticmethod
     @utils.timeit
-    def delete_volume(volume):
+    def delete_volume(self, volume):
         volume.delete()
+        utils.wait_until(self.cinder.volumes, volume.id, cinder_ex.NotFound)
 
     @utils.timeit
     def create_server(self, server):
         vm = self.nova.servers.create(name=server.name, image=self.image,
                                       flavor=self.flavor)
-        utils.wait_until(self.nova, vm.id, 'running')
+        utils.wait_until(self.nova.servers, vm.id, 'ACTIVE')
 
-    @staticmethod
     @utils.timeit
-    def delete_server(server):
+    def delete_server(self, server):
         server.delete()
+        utils.wait_until(self.nova.servers, server.id, nova_ex.NotFound)
 
     @utils.timeit
     def attach(self, server, volume):
         self.nova.volumes.create_server_volume(server.id, volume.id)
-        utils.wait_until(self.cinder, volume.id, 'in-use')
+        utils.wait_until(self.cinder.volumes, volume.id, 'in-use')
 
     @utils.timeit
     def detach(self, server, volume):
         self.nova.volumes.delete_server_volume(server.id, volume.id)
-        utils.wait_until(self.cinder, volume.id, 'available')
+        utils.wait_until(self.cinder.volumes, volume.id, 'available')
 
 
 class StoropsControl(BaseControl):

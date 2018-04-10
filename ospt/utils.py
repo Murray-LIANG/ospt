@@ -76,7 +76,7 @@ def timeit(func):
     return _wrapper
 
 
-def wait_until(client, res_id, criteria, timeout=60):
+def wait_until(res_manager, res_id, criteria, timeout=1200):
     start_point = time.time()
     while True:
         if time.time() - start_point > timeout:
@@ -84,7 +84,12 @@ def wait_until(client, res_id, criteria, timeout=60):
                 'Timeout before {} becoming {}. {} sec passed.'.format(
                     res_id, criteria, timeout))
         time.sleep(1)
-        res = client.get(res_id)
+        try:
+            res = res_manager.get(res_id)
+        except Exception as ex:
+            if isinstance(ex, criteria):
+                break
+
         if res.status == criteria:
             break
 
