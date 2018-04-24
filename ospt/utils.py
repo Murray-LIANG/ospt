@@ -1,8 +1,9 @@
 import functools
+import inspect
 import logging
-from logging import handlers
 import time
 from contextlib import contextmanager
+from logging import handlers
 
 from ospt import exceptions as ospt_ex
 
@@ -87,7 +88,7 @@ def wait_until(res_manager, res_id, criteria, timeout=1200):
         try:
             res = res_manager.get(res_id)
         except Exception as ex:
-            if isinstance(ex, criteria):
+            if inspect.isclass(criteria) and isinstance(ex, criteria):
                 break
 
         if res.status == criteria:
