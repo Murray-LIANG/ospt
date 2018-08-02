@@ -2,7 +2,8 @@
 Dell EMC OpenStack Performance Test.
 
 usage:
-    ospt [-hV] [--os_auth_ip <auth_ip>] [--os_project <project>]
+    ospt [-hV] [--os_auth_ip <auth_ip>] [--os_auth_version <auth_ver>]
+         [--os_project <project>]
          [--storops_vnx <vnx>] [--storops_unity <unity>]
          [--username <username>] [--password <password>]
          [--pattern <pattern>] [--log <log_file>]
@@ -12,6 +13,7 @@ options:
     -h --help                       Show the help, could be used for commands
     -V --version                    Show the version
     --os_auth_ip <auth_ip>          OpenStack auth (Keystone) IP address
+    --os_auth_version <auth_ver>    OpenStack auth (Keystone) version
     --os_project <project>          OpenStack project name
     --storops_vnx <vnx>             VNX IP to which storops connects
     --storops_unity <unity>         Unity IP to which storops connects

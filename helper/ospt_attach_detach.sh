@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-ospt_cmd='ospt --os_auth_ip 172.16.1.5 --os_project admin --username admin --password welcome'
+ospt_cmd='ospt --os_auth_ip 172.16.1.5 --os_auth_version v3 --os_project admin --username admin --password welcome'
 
 set -x
 for num in 10 15 20 25 30 40; do
