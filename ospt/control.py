@@ -23,15 +23,26 @@ def create_control(args):
     password = args.get('--password', None)
 
     auth_ip = args.get('--os_auth_ip', None)
+    auth_ver = args.get('--os_auth_version', 'v2')
     project = args.get('--os_project', None)
 
-    if all((auth_ip, username, password, project)):
+    if all((auth_ip, username, password, project, auth_ver)):
         loader = loading.get_plugin_loader('password')
-        auth = loader.load_from_options(
-            auth_url='http://{}:5000/v2.0'.format(auth_ip),
-            username=username,
-            password=password,
-            project_name=project)
+        if auth_ver == 'v3':
+            from keystoneauth1.identity import v3
+            auth = v3.Password(
+                auth_url='http://{}/identity/v3'.format(auth_ip),
+                username=username,
+                password=password,
+                project_name=project,
+                project_domain_name='Default',
+                user_domain_name='Default')
+        else:
+            auth = loader.load_from_options(
+                auth_url='http://{}:5000/v2.0'.format(auth_ip),
+                username=username,
+                password=password,
+                project_name=project)
         sess = session.Session(auth=auth)
         nova = n_client.Client(2, session=sess)
         cinder = c_client.Client(2, session=sess)
@@ -134,9 +145,21 @@ class BaseControl(object):
                     existing=len(more), required=count)
 
             n = int(math.ceil(count / len(less)))
-            less_repeat = itertools.chain.from_iterable([less] * n)[:count]
-            return (zip(more[:count], less_repeat) if is_more_servers else
-                    zip(less_repeat, more[:count]))
+
+            if is_more_servers:
+                less_repeat = list(itertools.chain.from_iterable([less] * n))[
+                              :count]
+                return zip(more[:count], less_repeat)
+            else:
+                mappings = []
+                num_attach_srv = min(len(less), count)
+                num_attach_vol = min(len(more),
+                                     num_attach_srv * mapping_v / mapping_s)
+                for i in range(num_attach_vol):
+                    idx = i % num_attach_srv
+                    pair = (servers[idx], volumes[i])
+                    mappings.append(pair)
+                return mappings
 
     def get_volumes(self, tag):
         raise NotImplementedError()
